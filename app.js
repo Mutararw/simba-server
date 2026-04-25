@@ -2,6 +2,7 @@ import express from 'express'
 import cors from 'cors'
 import productRoutes from './routes/productRoutes.js'
 import orderRoutes from './routes/orderRoutes.js'
+import aiRoutes from './routes/aiRoutes.js'
 import { authHandler } from './lib/auth.js'
 import { prisma } from './lib/prisma.js'
 
@@ -64,6 +65,7 @@ app.get('/api/health', async (_req, res) => {
 
 app.use('/api/products', productRoutes)
 app.use('/api/orders', orderRoutes)
+app.use('/api/ai', aiRoutes)
 
 app.use((error, _req, res, _next) => {
   return res.status(500).json({

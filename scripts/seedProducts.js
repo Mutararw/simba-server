@@ -1,10 +1,11 @@
 import 'dotenv/config'
-import productsPayload from '../../client/src/assets/products.json' with { type: 'json' }
+import productsPayload from '../../simba-frontend/src/data/simba_products.json' with { type: 'json' }
 import { prisma } from '../lib/prisma.js'
 
 const products = Array.isArray(productsPayload?.products) ? productsPayload.products : []
 
 const mapProduct = (product) => ({
+  id: BigInt(product.id),
   name: product.name,
   category: product.category || 'General',
   description: product.unit ? `Unit: ${product.unit}` : null,
@@ -29,7 +30,7 @@ const seedProducts = async () => {
   }
 
   if (products.length === 0) {
-    console.log('No products found in client/src/assets/products.json.')
+    console.log('No products found in simba-frontend/src/data/simba_products.json.')
     return
   }
 

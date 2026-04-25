@@ -7,9 +7,9 @@ const toProductDto = (product) => ({
   description: product.description,
   price: Number(product.price),
   stock: product.stock,
-  image_url: product.imageUrl,
-  created_at: product.createdAt,
-  updated_at: product.updatedAt
+  imageUrl: product.imageUrl,
+  createdAt: product.createdAt,
+  updatedAt: product.updatedAt
 })
 
 export const getAllProducts = async () => {

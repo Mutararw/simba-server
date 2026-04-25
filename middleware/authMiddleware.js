@@ -26,6 +26,31 @@ export const authenticateToken = async (req, res, next) => {
   }
 }
 
+export const optionalAuthenticateToken = async (req, res, next) => {
+  try {
+    const session = await auth.api.getSession({
+      headers: fromNodeHeaders(req.headers)
+    })
+
+    if (session?.user) {
+      req.user = {
+        id: session.user.id,
+        email: session.user.email,
+        accountType: session.user.accountType || 'user',
+        adminRole: session.user.adminRole || null,
+        name: session.user.name
+      }
+      req.session = session.session
+    } else {
+      req.user = { id: 'guest-user', name: 'Guest', email: 'guest@simba.com', accountType: 'user' }
+    }
+    return next()
+  } catch (error) {
+    req.user = { id: 'guest-user', name: 'Guest', email: 'guest@simba.com', accountType: 'user' }
+    return next()
+  }
+}
+
 export const authorizeProductAdmins = (req, res, next) => {
   if (req.user?.accountType !== 'admin') {
     return res.status(403).json({ message: 'Admin access required' })

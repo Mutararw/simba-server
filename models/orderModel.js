@@ -1,6 +1,17 @@
 import { prisma } from '../lib/prisma.js'
 
-export const createOrderWithItems = async ({ userId, items }) => {
+export const createOrderWithItems = async ({ userId, items, branchId, pickupTime, phone, paymentMethod }) => {
+  // Ensure user exists (for guest checkout)
+  await prisma.user.upsert({
+    where: { id: userId },
+    update: {},
+    create: {
+      id: userId,
+      name: 'Guest User',
+      email: `guest_${userId}@simba.com`,
+    }
+  })
+
   return prisma.$transaction(async (tx) => {
     let totalAmount = 0
     const normalizedItems = []
@@ -46,7 +57,11 @@ export const createOrderWithItems = async ({ userId, items }) => {
       data: {
         userId,
         totalAmount,
-        status: 'pending'
+        status: 'pending',
+        branchId,
+        pickupTime,
+        phone,
+        paymentMethod: paymentMethod || "momo"
       }
     })
 

@@ -185,6 +185,9 @@ exports.Prisma.OrderScalarFieldEnum = {
   userId: 'userId',
   totalAmount: 'totalAmount',
   status: 'status',
+  branchId: 'branchId',
+  pickupTime: 'pickupTime',
+  phone: 'phone',
   createdAt: 'createdAt'
 };
 

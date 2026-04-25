@@ -90,6 +90,9 @@ model Order {
   userId      String
   totalAmount Decimal     @db.Decimal(12, 2)
   status      String      @default("pending")
+  branchId    String?
+  pickupTime  String?
+  phone       String?
   createdAt   DateTime    @default(now())
   user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   items       OrderItem[]
