@@ -1,5 +1,12 @@
 import express from 'express'
 import cors from 'cors'
+
+// Fix BigInt serialization
+if (!BigInt.prototype.toJSON) {
+  BigInt.prototype.toJSON = function () {
+    return this.toString()
+  }
+}
 import productRoutes from './routes/productRoutes.js'
 import orderRoutes from './routes/orderRoutes.js'
 import aiRoutes from './routes/aiRoutes.js'

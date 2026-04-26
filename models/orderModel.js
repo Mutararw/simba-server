@@ -1,5 +1,18 @@
 import { prisma } from '../lib/prisma.js'
 
+const toOrderDto = (order) => ({
+  id: Number(order.id),
+  orderId: Number(order.id), // For compatibility with different frontend parts
+  userId: order.userId,
+  totalAmount: Number(order.totalAmount),
+  status: order.status,
+  branchId: order.branchId,
+  pickupTime: order.pickupTime,
+  phone: order.phone,
+  paymentMethod: order.paymentMethod,
+  createdAt: order.createdAt
+})
+
 export const createOrderWithItems = async ({ userId, items, branchId, pickupTime, phone, paymentMethod }) => {
   // Ensure user exists (for guest checkout)
   await prisma.user.upsert({
@@ -87,13 +100,7 @@ export const createOrderWithItems = async ({ userId, items, branchId, pickupTime
       })
     }
 
-    return {
-      id: Number(order.id),
-      user_id: order.userId,
-      total_amount: Number(order.totalAmount),
-      status: order.status,
-      created_at: order.createdAt
-    }
+    return toOrderDto(order)
   })
 }
 
@@ -122,19 +129,18 @@ export const getOrdersByUserId = async (userId) => {
     }
   })
 
-  return orders.map((order) => ({
-    orderId: Number(order.id),
-    userId: order.userId,
-    totalAmount: Number(order.totalAmount),
-    status: order.status,
-    createdAt: order.createdAt,
-    items: order.items.map((item) => ({
-      orderItemId: Number(item.id),
-      productId: Number(item.productId),
-      productName: item.product.name,
-      imageUrl: item.product.imageUrl,
-      quantity: item.quantity,
-      unitPrice: Number(item.unitPrice)
-    }))
-  }))
+  return orders.map((order) => {
+    const dto = toOrderDto(order)
+    return {
+      ...dto,
+      items: order.items.map((item) => ({
+        orderItemId: Number(item.id),
+        productId: Number(item.productId),
+        productName: item.product.name,
+        imageUrl: item.product.imageUrl,
+        quantity: item.quantity,
+        unitPrice: Number(item.unitPrice)
+      }))
+    }
+  })
 }
