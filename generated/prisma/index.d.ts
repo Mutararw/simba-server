@@ -7186,6 +7186,7 @@ export namespace Prisma {
     branchId: string | null
     pickupTime: string | null
     phone: string | null
+    paymentMethod: string | null
     createdAt: Date | null
   }
 
@@ -7197,6 +7198,7 @@ export namespace Prisma {
     branchId: string | null
     pickupTime: string | null
     phone: string | null
+    paymentMethod: string | null
     createdAt: Date | null
   }
 
@@ -7208,6 +7210,7 @@ export namespace Prisma {
     branchId: number
     pickupTime: number
     phone: number
+    paymentMethod: number
     createdAt: number
     _all: number
   }
@@ -7231,6 +7234,7 @@ export namespace Prisma {
     branchId?: true
     pickupTime?: true
     phone?: true
+    paymentMethod?: true
     createdAt?: true
   }
 
@@ -7242,6 +7246,7 @@ export namespace Prisma {
     branchId?: true
     pickupTime?: true
     phone?: true
+    paymentMethod?: true
     createdAt?: true
   }
 
@@ -7253,6 +7258,7 @@ export namespace Prisma {
     branchId?: true
     pickupTime?: true
     phone?: true
+    paymentMethod?: true
     createdAt?: true
     _all?: true
   }
@@ -7351,6 +7357,7 @@ export namespace Prisma {
     branchId: string | null
     pickupTime: string | null
     phone: string | null
+    paymentMethod: string | null
     createdAt: Date
     _count: OrderCountAggregateOutputType | null
     _avg: OrderAvgAggregateOutputType | null
@@ -7381,6 +7388,7 @@ export namespace Prisma {
     branchId?: boolean
     pickupTime?: boolean
     phone?: boolean
+    paymentMethod?: boolean
     createdAt?: boolean
     user?: boolean | UserDefaultArgs<ExtArgs>
     items?: boolean | Order$itemsArgs<ExtArgs>
@@ -7395,6 +7403,7 @@ export namespace Prisma {
     branchId?: boolean
     pickupTime?: boolean
     phone?: boolean
+    paymentMethod?: boolean
     createdAt?: boolean
     user?: boolean | UserDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["order"]>
@@ -7407,6 +7416,7 @@ export namespace Prisma {
     branchId?: boolean
     pickupTime?: boolean
     phone?: boolean
+    paymentMethod?: boolean
     createdAt?: boolean
     user?: boolean | UserDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["order"]>
@@ -7419,10 +7429,11 @@ export namespace Prisma {
     branchId?: boolean
     pickupTime?: boolean
     phone?: boolean
+    paymentMethod?: boolean
     createdAt?: boolean
   }
 
-  export type OrderOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "userId" | "totalAmount" | "status" | "branchId" | "pickupTime" | "phone" | "createdAt", ExtArgs["result"]["order"]>
+  export type OrderOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "userId" | "totalAmount" | "status" | "branchId" | "pickupTime" | "phone" | "paymentMethod" | "createdAt", ExtArgs["result"]["order"]>
   export type OrderInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     user?: boolean | UserDefaultArgs<ExtArgs>
     items?: boolean | Order$itemsArgs<ExtArgs>
@@ -7449,6 +7460,7 @@ export namespace Prisma {
       branchId: string | null
       pickupTime: string | null
       phone: string | null
+      paymentMethod: string | null
       createdAt: Date
     }, ExtArgs["result"]["order"]>
     composites: {}
@@ -7882,6 +7894,7 @@ export namespace Prisma {
     readonly branchId: FieldRef<"Order", 'String'>
     readonly pickupTime: FieldRef<"Order", 'String'>
     readonly phone: FieldRef<"Order", 'String'>
+    readonly paymentMethod: FieldRef<"Order", 'String'>
     readonly createdAt: FieldRef<"Order", 'DateTime'>
   }
     
@@ -9544,6 +9557,7 @@ export namespace Prisma {
     branchId: 'branchId',
     pickupTime: 'pickupTime',
     phone: 'phone',
+    paymentMethod: 'paymentMethod',
     createdAt: 'createdAt'
   };
 
@@ -10076,6 +10090,7 @@ export namespace Prisma {
     branchId?: StringNullableFilter<"Order"> | string | null
     pickupTime?: StringNullableFilter<"Order"> | string | null
     phone?: StringNullableFilter<"Order"> | string | null
+    paymentMethod?: StringNullableFilter<"Order"> | string | null
     createdAt?: DateTimeFilter<"Order"> | Date | string
     user?: XOR<UserScalarRelationFilter, UserWhereInput>
     items?: OrderItemListRelationFilter
@@ -10089,6 +10104,7 @@ export namespace Prisma {
     branchId?: SortOrderInput | SortOrder
     pickupTime?: SortOrderInput | SortOrder
     phone?: SortOrderInput | SortOrder
+    paymentMethod?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     user?: UserOrderByWithRelationInput
     items?: OrderItemOrderByRelationAggregateInput
@@ -10105,6 +10121,7 @@ export namespace Prisma {
     branchId?: StringNullableFilter<"Order"> | string | null
     pickupTime?: StringNullableFilter<"Order"> | string | null
     phone?: StringNullableFilter<"Order"> | string | null
+    paymentMethod?: StringNullableFilter<"Order"> | string | null
     createdAt?: DateTimeFilter<"Order"> | Date | string
     user?: XOR<UserScalarRelationFilter, UserWhereInput>
     items?: OrderItemListRelationFilter
@@ -10118,6 +10135,7 @@ export namespace Prisma {
     branchId?: SortOrderInput | SortOrder
     pickupTime?: SortOrderInput | SortOrder
     phone?: SortOrderInput | SortOrder
+    paymentMethod?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     _count?: OrderCountOrderByAggregateInput
     _avg?: OrderAvgOrderByAggregateInput
@@ -10137,6 +10155,7 @@ export namespace Prisma {
     branchId?: StringNullableWithAggregatesFilter<"Order"> | string | null
     pickupTime?: StringNullableWithAggregatesFilter<"Order"> | string | null
     phone?: StringNullableWithAggregatesFilter<"Order"> | string | null
+    paymentMethod?: StringNullableWithAggregatesFilter<"Order"> | string | null
     createdAt?: DateTimeWithAggregatesFilter<"Order"> | Date | string
   }
 
@@ -10641,6 +10660,7 @@ export namespace Prisma {
     branchId?: string | null
     pickupTime?: string | null
     phone?: string | null
+    paymentMethod?: string | null
     createdAt?: Date | string
     user: UserCreateNestedOneWithoutOrdersInput
     items?: OrderItemCreateNestedManyWithoutOrderInput
@@ -10654,6 +10674,7 @@ export namespace Prisma {
     branchId?: string | null
     pickupTime?: string | null
     phone?: string | null
+    paymentMethod?: string | null
     createdAt?: Date | string
     items?: OrderItemUncheckedCreateNestedManyWithoutOrderInput
   }
@@ -10665,6 +10686,7 @@ export namespace Prisma {
     branchId?: NullableStringFieldUpdateOperationsInput | string | null
     pickupTime?: NullableStringFieldUpdateOperationsInput | string | null
     phone?: NullableStringFieldUpdateOperationsInput | string | null
+    paymentMethod?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     user?: UserUpdateOneRequiredWithoutOrdersNestedInput
     items?: OrderItemUpdateManyWithoutOrderNestedInput
@@ -10678,6 +10700,7 @@ export namespace Prisma {
     branchId?: NullableStringFieldUpdateOperationsInput | string | null
     pickupTime?: NullableStringFieldUpdateOperationsInput | string | null
     phone?: NullableStringFieldUpdateOperationsInput | string | null
+    paymentMethod?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     items?: OrderItemUncheckedUpdateManyWithoutOrderNestedInput
   }
@@ -10690,6 +10713,7 @@ export namespace Prisma {
     branchId?: string | null
     pickupTime?: string | null
     phone?: string | null
+    paymentMethod?: string | null
     createdAt?: Date | string
   }
 
@@ -10700,6 +10724,7 @@ export namespace Prisma {
     branchId?: NullableStringFieldUpdateOperationsInput | string | null
     pickupTime?: NullableStringFieldUpdateOperationsInput | string | null
     phone?: NullableStringFieldUpdateOperationsInput | string | null
+    paymentMethod?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
@@ -10711,6 +10736,7 @@ export namespace Prisma {
     branchId?: NullableStringFieldUpdateOperationsInput | string | null
     pickupTime?: NullableStringFieldUpdateOperationsInput | string | null
     phone?: NullableStringFieldUpdateOperationsInput | string | null
+    paymentMethod?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
@@ -11233,6 +11259,7 @@ export namespace Prisma {
     branchId?: SortOrder
     pickupTime?: SortOrder
     phone?: SortOrder
+    paymentMethod?: SortOrder
     createdAt?: SortOrder
   }
 
@@ -11249,6 +11276,7 @@ export namespace Prisma {
     branchId?: SortOrder
     pickupTime?: SortOrder
     phone?: SortOrder
+    paymentMethod?: SortOrder
     createdAt?: SortOrder
   }
 
@@ -11260,6 +11288,7 @@ export namespace Prisma {
     branchId?: SortOrder
     pickupTime?: SortOrder
     phone?: SortOrder
+    paymentMethod?: SortOrder
     createdAt?: SortOrder
   }
 
@@ -11947,6 +11976,7 @@ export namespace Prisma {
     branchId?: string | null
     pickupTime?: string | null
     phone?: string | null
+    paymentMethod?: string | null
     createdAt?: Date | string
     items?: OrderItemCreateNestedManyWithoutOrderInput
   }
@@ -11958,6 +11988,7 @@ export namespace Prisma {
     branchId?: string | null
     pickupTime?: string | null
     phone?: string | null
+    paymentMethod?: string | null
     createdAt?: Date | string
     items?: OrderItemUncheckedCreateNestedManyWithoutOrderInput
   }
@@ -12064,6 +12095,7 @@ export namespace Prisma {
     branchId?: StringNullableFilter<"Order"> | string | null
     pickupTime?: StringNullableFilter<"Order"> | string | null
     phone?: StringNullableFilter<"Order"> | string | null
+    paymentMethod?: StringNullableFilter<"Order"> | string | null
     createdAt?: DateTimeFilter<"Order"> | Date | string
   }
 
@@ -12381,6 +12413,7 @@ export namespace Prisma {
     branchId?: string | null
     pickupTime?: string | null
     phone?: string | null
+    paymentMethod?: string | null
     createdAt?: Date | string
     user: UserCreateNestedOneWithoutOrdersInput
   }
@@ -12393,6 +12426,7 @@ export namespace Prisma {
     branchId?: string | null
     pickupTime?: string | null
     phone?: string | null
+    paymentMethod?: string | null
     createdAt?: Date | string
   }
 
@@ -12448,6 +12482,7 @@ export namespace Prisma {
     branchId?: NullableStringFieldUpdateOperationsInput | string | null
     pickupTime?: NullableStringFieldUpdateOperationsInput | string | null
     phone?: NullableStringFieldUpdateOperationsInput | string | null
+    paymentMethod?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     user?: UserUpdateOneRequiredWithoutOrdersNestedInput
   }
@@ -12460,6 +12495,7 @@ export namespace Prisma {
     branchId?: NullableStringFieldUpdateOperationsInput | string | null
     pickupTime?: NullableStringFieldUpdateOperationsInput | string | null
     phone?: NullableStringFieldUpdateOperationsInput | string | null
+    paymentMethod?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
@@ -12530,6 +12566,7 @@ export namespace Prisma {
     branchId?: string | null
     pickupTime?: string | null
     phone?: string | null
+    paymentMethod?: string | null
     createdAt?: Date | string
   }
 
@@ -12615,6 +12652,7 @@ export namespace Prisma {
     branchId?: NullableStringFieldUpdateOperationsInput | string | null
     pickupTime?: NullableStringFieldUpdateOperationsInput | string | null
     phone?: NullableStringFieldUpdateOperationsInput | string | null
+    paymentMethod?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     items?: OrderItemUpdateManyWithoutOrderNestedInput
   }
@@ -12626,6 +12664,7 @@ export namespace Prisma {
     branchId?: NullableStringFieldUpdateOperationsInput | string | null
     pickupTime?: NullableStringFieldUpdateOperationsInput | string | null
     phone?: NullableStringFieldUpdateOperationsInput | string | null
+    paymentMethod?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     items?: OrderItemUncheckedUpdateManyWithoutOrderNestedInput
   }
@@ -12637,6 +12676,7 @@ export namespace Prisma {
     branchId?: NullableStringFieldUpdateOperationsInput | string | null
     pickupTime?: NullableStringFieldUpdateOperationsInput | string | null
     phone?: NullableStringFieldUpdateOperationsInput | string | null
+    paymentMethod?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 

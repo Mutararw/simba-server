@@ -13,19 +13,23 @@ export const processAiQuery = async (req, res) => {
       return res.status(500).json({ error: 'Groq API Key not configured on the server.' });
     }
 
-    // Fetch products to give context to the AI
-    // We only take essential fields to save token space
-    const products = await prisma.product.findMany({
+    // Fetch products to give context to the AI and for hydrating the response
+    const allProducts = await prisma.product.findMany({
       select: {
         id: true,
         name: true,
         category: true,
         price: true,
-        stock: true
+        stock: true,
+        imageUrl: true
       }
     });
 
-    const productsContext = JSON.stringify(products);
+    // Create a safe context avoiding BigInt serialization issues
+    // Using an array of arrays [id, name] and limiting to 30 products to stay well within Groq's Free Tier limits
+    const contextProducts = allProducts.slice(0, 30).map(p => [p.id.toString(), p.name]);
+
+    const productsContext = JSON.stringify(contextProducts);
 
     const systemPrompt = `You are the official AI Assistant for Simba Supermarket Rwanda (Kigali).
 Your job is to help customers find products, recommend items, and answer FAQs.
@@ -34,13 +38,14 @@ STORE INFO:
 - Simba Supermarket has 9 branches across Kigali (including Remera, Nyamirambo, etc.)
 - Average pickup time is 45 minutes.
 - Payments are accepted via Mobile Money (MoMo).
-- If a customer asks a difficult question or something outside your knowledge, gracefully fall back and provide our contact info:
+- CRITICAL INSTRUCTION: If a user asks a question you do not know the answer to, or if the question is unrelated to the supermarket, you MUST respond by apologizing and providing our support team's contact info exactly as follows:
+  "I'm sorry, but I don't have the answer to that. Please contact our support team:
   - Phone: +250 788 000 000
   - Facebook: https://www.facebook.com/SimbaSupermarketRwanda
   - Instagram: https://www.instagram.com/simbasupermarketrwanda
-  - Twitter (X): https://twitter.com/SimbaRwanda
+  - Twitter (X): https://twitter.com/SimbaRwanda"
 
-CATALOG:
+CATALOG (Format: [id, name]):
 ${productsContext}
 
 INSTRUCTIONS:
@@ -62,7 +67,7 @@ NEVER output raw markdown, only the raw JSON string.`;
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
+        model: 'llama-3.1-8b-instant',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: query }
@@ -75,7 +80,13 @@ NEVER output raw markdown, only the raw JSON string.`;
     if (!response.ok) {
       const errorText = await response.text();
       console.error('Groq API Error:', errorText);
-      return res.status(502).json({ error: 'Failed to communicate with AI provider.' });
+      // Fallback to support info if API fails (rate limits, etc.)
+      return res.json({
+        reply: "I'm sorry, I'm having trouble processing your request right now. Please contact our support team directly:\n- Phone: +250 788 000 000\n- Instagram: https://www.instagram.com/simbasupermarketrwanda\n- Facebook: https://www.facebook.com/SimbaSupermarketRwanda",
+        productIds: [],
+        addToCartIds: [],
+        products: []
+      });
     }
 
     const data = await response.json();
@@ -83,10 +94,25 @@ NEVER output raw markdown, only the raw JSON string.`;
     
     let parsedContent;
     try {
-      parsedContent = JSON.parse(content);
+      let cleanContent = content.trim();
+      if (cleanContent.startsWith('```')) {
+        cleanContent = cleanContent.replace(/^```(json)?\n?/, '').replace(/\n?```$/, '').trim();
+      }
+      parsedContent = JSON.parse(cleanContent);
     } catch (err) {
       console.error("Failed to parse AI JSON response", content);
       return res.status(500).json({ error: 'Invalid AI response format' });
+    }
+
+    // Hydrate the products before returning to the frontend
+    if (parsedContent.productIds && Array.isArray(parsedContent.productIds)) {
+      parsedContent.products = allProducts
+        .filter(p => parsedContent.productIds.includes(p.id.toString()))
+        .map(p => ({
+          ...p,
+          id: p.id.toString(),
+          price: Number(p.price)
+        }));
     }
 
     return res.json(parsedContent);
