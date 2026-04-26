@@ -2,7 +2,9 @@ import { prisma } from '../lib/prisma.js'
 
 export const processAiQuery = async (req, res) => {
   try {
-    const { query } = req.body;
+    console.log('AI Request Body:', req.body);
+    console.log('AI Request Headers:', req.headers);
+    const { query } = req.body || {};
     
     if (!query) {
       return res.status(400).json({ error: 'Query is required' });
@@ -26,8 +28,8 @@ export const processAiQuery = async (req, res) => {
     });
 
     // Create a safe context avoiding BigInt serialization issues
-    // Using an array of arrays [id, name] and limiting to 30 products to stay well within Groq's Free Tier limits
-    const contextProducts = allProducts.slice(0, 30).map(p => [p.id.toString(), p.name]);
+    // Including more products to give the AI a better view of the catalog
+    const contextProducts = allProducts.slice(0, 150).map(p => [p.id.toString(), p.name]);
 
     const productsContext = JSON.stringify(contextProducts);
 
@@ -80,9 +82,8 @@ NEVER output raw markdown, only the raw JSON string.`;
     if (!response.ok) {
       const errorText = await response.text();
       console.error('Groq API Error:', errorText);
-      // Fallback to support info if API fails (rate limits, etc.)
       return res.json({
-        reply: "I'm sorry, I'm having trouble processing your request right now. Please contact our support team directly:\n- Phone: +250 788 000 000\n- Instagram: https://www.instagram.com/simbasupermarketrwanda\n- Facebook: https://www.facebook.com/SimbaSupermarketRwanda",
+        reply: "I'm sorry, I'm having trouble processing your request right now. Please contact our support team directly:\n- Phone: +250 788 000 000\n- Instagram: https://www.instagram.com/simbasupermarketrwanda",
         productIds: [],
         addToCartIds: [],
         products: []
@@ -90,8 +91,12 @@ NEVER output raw markdown, only the raw JSON string.`;
     }
 
     const data = await response.json();
-    const content = data.choices[0].message.content;
+    const content = data.choices[0]?.message?.content;
     
+    if (!content) {
+      throw new Error('Empty response from AI');
+    }
+
     let parsedContent;
     try {
       let cleanContent = content.trim();
@@ -105,15 +110,20 @@ NEVER output raw markdown, only the raw JSON string.`;
     }
 
     // Hydrate the products before returning to the frontend
-    if (parsedContent.productIds && Array.isArray(parsedContent.productIds)) {
-      parsedContent.products = allProducts
-        .filter(p => parsedContent.productIds.includes(p.id.toString()))
-        .map(p => ({
-          ...p,
-          id: p.id.toString(),
-          price: Number(p.price)
-        }));
-    }
+    // Use robust ID matching (convert both to String)
+    const recommendedIds = (parsedContent.productIds || []).map(String);
+    const cartIds = (parsedContent.addToCartIds || []).map(String);
+
+    parsedContent.products = allProducts
+      .filter(p => recommendedIds.includes(p.id.toString()))
+      .map(p => ({
+        ...p,
+        id: p.id.toString(),
+        price: Number(p.price)
+      }));
+
+    // Ensure cart IDs are also strings in the final response
+    parsedContent.addToCartIds = cartIds;
 
     return res.json(parsedContent);
   } catch (error) {
