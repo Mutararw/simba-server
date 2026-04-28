@@ -1,7 +1,5 @@
 generator client {
   provider   = "prisma-client-js"
-  output     = "../generated/prisma"
-  engineType = "client"
 }
 
 datasource db {
@@ -15,14 +13,32 @@ model User {
   emailVerified Boolean   @default(false)
   image         String?
   accountType   String    @default("user")
+  isApproved    Boolean   @default(true)
   adminRole     String?
+  branchId      String?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   accounts      Account[]
   sessions      Session[]
   orders        Order[]
+  branch        Branch?   @relation(fields: [branchId], references: [id])
+  sentMessages     ChatMessage[] @relation("SentMessages")
+  receivedMessages ChatMessage[] @relation("ReceivedMessages")
+  notifications    Notification[]
 
   @@index([accountType])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  message   String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 model Session {
@@ -70,35 +86,67 @@ model Verification {
   @@index([identifier])
 }
 
+model Branch {
+  id        String    @id @default(cuid())
+  name      String
+  location  String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  users     User[]
+  orders    Order[]
+  stocks    BranchStock[]
+  suppliers Supplier[]
+  stockHistory StockHistory[]
+}
+
 model Product {
   id          BigInt      @id @default(autoincrement())
   name        String
   category    String      @default("General")
   description String?
   price       Decimal     @db.Decimal(12, 2)
-  stock       Int         @default(0)
+  stock       Int         @default(0) // Global stock or default
   imageUrl    String?
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
   orderItems  OrderItem[]
+  branchStocks BranchStock[]
+  stockHistory StockHistory[]
 
   @@index([category])
 }
 
+model BranchStock {
+  id        String   @id @default(cuid())
+  branchId  String
+  productId BigInt
+  stock     Int      @default(0)
+  branch    Branch   @relation(fields: [branchId], references: [id])
+  product   Product  @relation(fields: [productId], references: [id])
+
+  @@unique([branchId, productId])
+}
+
 model Order {
-  id          BigInt      @id @default(autoincrement())
-  userId      String
-  totalAmount Decimal     @db.Decimal(12, 2)
-  status      String      @default("pending")
-  branchId    String?
-  pickupTime  String?
-  phone       String?
-  paymentMethod String?   @default("momo")
-  createdAt   DateTime    @default(now())
-  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  items       OrderItem[]
+  id            BigInt      @id @default(autoincrement())
+  userId        String
+  totalAmount   Decimal     @db.Decimal(12, 2)
+  status        String      @default("pending") // pending, accepted, completed, cancelled
+  orderType     String      @default("shopping") // shopping, pickup
+  isAccepted    Boolean     @default(false)
+  branchId      String?
+  pickupTime    String?
+  phone         String?
+  paymentMethod String?     @default("momo")
+  paymentStatus String      @default("pending") // pending, paid, failed
+  paymentReference String?
+  createdAt     DateTime    @default(now())
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  branch        Branch?     @relation(fields: [branchId], references: [id])
+  items         OrderItem[]
 
   @@index([userId])
+  @@index([branchId])
 }
 
 model OrderItem {
@@ -113,3 +161,44 @@ model OrderItem {
   @@index([orderId])
   @@index([productId])
 }
+
+model Supplier {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  phone     String?
+  branchId  String?
+  branch    Branch?  @relation(fields: [branchId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ChatMessage {
+  id         String   @id @default(cuid())
+  content    String
+  senderId   String
+  receiverId String
+  createdAt  DateTime @default(now())
+  
+  sender     User     @relation("SentMessages", fields: [senderId], references: [id])
+  receiver   User     @relation("ReceivedMessages", fields: [receiverId], references: [id])
+
+  @@index([senderId])
+  @@index([receiverId])
+}
+
+model StockHistory {
+  id        String   @id @default(cuid())
+  productId BigInt
+  branchId  String?
+  type      String   // "stock_in", "sale"
+  quantity  Int
+  createdAt DateTime @default(now())
+  product   Product  @relation(fields: [productId], references: [id])
+  branch    Branch?  @relation(fields: [branchId], references: [id])
+
+  @@index([productId])
+  @@index([branchId])
+}
+
+

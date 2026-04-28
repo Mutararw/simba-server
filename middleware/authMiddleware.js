@@ -16,6 +16,7 @@ export const authenticateToken = async (req, res, next) => {
       email: session.user.email,
       accountType: session.user.accountType || 'user',
       adminRole: session.user.adminRole || null,
+      branchId: session.user.branchId || null,
       name: session.user.name
     }
     req.session = session.session
@@ -38,6 +39,7 @@ export const optionalAuthenticateToken = async (req, res, next) => {
         email: session.user.email,
         accountType: session.user.accountType || 'user',
         adminRole: session.user.adminRole || null,
+        branchId: session.user.branchId || null,
         name: session.user.name
       }
       req.session = session.session

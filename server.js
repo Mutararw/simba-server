@@ -6,8 +6,11 @@ const PORT = process.env.PORT || 5000
 
 const startServer = async () => {
   try {
+    console.log('Connecting to database...')
     await prisma.$connect()
+    console.log('Database connected. Verifying connection...')
     await prisma.$queryRaw`SELECT 1`
+    console.log('Connection verified. Starting server...')
     const server = app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`)
     })
