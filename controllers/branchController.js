@@ -114,19 +114,69 @@ export const receiveInventory = async (req, res) => {
     res.status(500).json({ message: 'Failed to receive inventory', error: error.message })
   }
 }
+
+export const getBranchRecommendations = async (req, res) => {
+  try {
+    const productId = Number(req.params.productId)
+    const excludeBranchId = req.query.excludeBranchId || req.user?.branchId || null
+
+    if (!productId) {
+      return res.status(400).json({ message: 'Product ID required' })
+    }
+
+    const branchStocks = await prisma.branchStock.findMany({
+      where: {
+        productId: BigInt(productId),
+        stock: {
+          gt: 0
+        },
+        ...(excludeBranchId ? { branchId: { not: excludeBranchId } } : {})
+      },
+      include: {
+        branch: {
+          select: {
+            id: true,
+            name: true,
+            location: true
+          }
+        }
+      },
+      orderBy: [
+        { stock: 'desc' },
+        { branchId: 'asc' }
+      ]
+    })
+
+    res.json(
+      branchStocks.map((stock) => ({
+        branchId: stock.branchId,
+        branchName: stock.branch?.name || stock.branchId,
+        location: stock.branch?.location || null,
+        stock: stock.stock
+      }))
+    )
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to fetch branch recommendations', error: error.message })
+  }
+}
 export const getBranchStats = async (req, res) => {
   try {
     const branchId = req.user.branchId || req.params.branchId
     if (!branchId) return res.status(400).json({ message: 'Branch ID required' })
 
-    const [revenue, ordersCount, stockCount, staffCount] = await Promise.all([
+    const [revenue, ordersCount, stockCount, staffCount, customersCount] = await Promise.all([
       prisma.order.aggregate({
         _sum: { totalAmount: true },
         where: { branchId, status: 'completed' }
       }),
       prisma.order.count({ where: { branchId } }),
       prisma.branchStock.count({ where: { branchId } }),
-      prisma.user.count({ where: { branchId } })
+      prisma.user.count({ where: { branchId } }),
+      prisma.order.groupBy({
+        by: ['userId'],
+        where: { branchId },
+        _count: { userId: true }
+      }).then(res => res.length)
     ])
 
     const salesOverTime = await prisma.order.findMany({
@@ -141,6 +191,7 @@ export const getBranchStats = async (req, res) => {
       ordersCount,
       stockCount,
       staffCount,
+      customersCount,
       salesOverTime: salesOverTime.map(s => ({
         amount: Number(s.totalAmount),
         date: s.createdAt
@@ -166,5 +217,41 @@ export const deleteBranchUser = async (req, res) => {
     res.json({ message: 'Staff member removed successfully' })
   } catch (error) {
     res.status(500).json({ message: 'Failed to remove staff', error: error.message })
+  }
+}
+
+export const getBranchCustomers = async (req, res) => {
+  try {
+    const branchId = req.user.branchId || req.params.branchId
+    if (!branchId) return res.status(400).json({ message: 'Branch ID required' })
+
+    // Find all unique users who have placed an order at this branch
+    const orders = await prisma.order.findMany({
+      where: { branchId },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            createdAt: true,
+            image: true
+          }
+        }
+      },
+      distinct: ['userId']
+    })
+
+    const customers = orders.map(order => {
+      const user = order.user;
+      return {
+        ...user,
+        lastOrderDate: order.createdAt
+      }
+    })
+
+    res.json(customers)
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to fetch branch customers', error: error.message })
   }
 }

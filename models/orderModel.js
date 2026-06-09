@@ -17,6 +17,53 @@ const toOrderDto = (order) => ({
   createdAt: order.createdAt
 })
 
+const toBranchRecommendation = (stockRow) => ({
+  branchId: stockRow.branchId,
+  branchName: stockRow.branch?.name || stockRow.branchId,
+  location: stockRow.branch?.location || null,
+  stock: stockRow.stock
+})
+
+const buildBranchStockError = async (tx, { productId, quantity, branchId, productName }) => {
+  const availableBranches = await tx.branchStock.findMany({
+    where: {
+      productId: BigInt(productId),
+      stock: {
+        gte: quantity
+      },
+      ...(branchId ? { branchId: { not: branchId } } : {})
+    },
+    include: {
+      branch: {
+        select: {
+          id: true,
+          name: true,
+          location: true
+        }
+      }
+    },
+    orderBy: [
+      { stock: 'desc' },
+      { branchId: 'asc' }
+    ]
+  })
+
+  const error = new Error(
+    `${productName || `Product ${productId}`} is not available in the selected branch`
+  )
+  error.status = 409
+  error.code = 'BRANCH_STOCK_UNAVAILABLE'
+  error.details = {
+    productId,
+    quantity,
+    branchId,
+    productName: productName || null,
+    availableBranches: availableBranches.map(toBranchRecommendation)
+  }
+
+  throw error
+}
+
 export const createOrderWithItems = async ({ userId, items, branchId, orderType, pickupTime, phone, paymentMethod }) => {
   // Ensure user exists (for guest checkout)
   await prisma.user.upsert({
@@ -47,6 +94,7 @@ export const createOrderWithItems = async ({ userId, items, branchId, orderType,
         },
         select: {
           id: true,
+          name: true,
           price: true,
           stock: true
         }
@@ -70,7 +118,12 @@ export const createOrderWithItems = async ({ userId, items, branchId, orderType,
         })
 
         if (!branchStock || branchStock.stock < quantity) {
-          throw new Error(`Insufficient stock for product ${productId} in this branch`)
+          await buildBranchStockError(tx, {
+            productId,
+            quantity,
+            branchId,
+            productName: product.name
+          })
         }
       } else if (product.stock < quantity) {
         throw new Error(`Insufficient stock for product ${productId}`)

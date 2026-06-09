@@ -21,9 +21,13 @@ export const createOrder = async (req, res) => {
 
     return res.status(201).json(order)
   } catch (error) {
-    return res.status(400).json({
+    const status = error.status || (error.code === 'BRANCH_STOCK_UNAVAILABLE' ? 409 : 400)
+
+    return res.status(status).json({
       message: 'Failed to create order',
-      error: error.message
+      error: error.message,
+      code: error.code || null,
+      details: error.details || null
     })
   }
 }
