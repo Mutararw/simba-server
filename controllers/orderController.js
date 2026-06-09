@@ -45,12 +45,19 @@ export const getMyOrders = async (req, res) => {
 
 export const getBranchOrders = async (req, res) => {
   try {
-    const branchId = req.user.branchId || req.params.branchId
-    if (!branchId) return res.status(400).json({ message: 'Branch ID required' })
+    let branchId = req.user.branchId || req.params.branchId
     
+    if (!branchId) {
+      return res.status(400).json({ message: 'Branch ID required. Ensure your account is assigned to a branch.' })
+    }
+
+    // Normalize branchId for consistent matching
+    branchId = branchId.trim().toLowerCase();
+
     const orders = await getOrdersByBranchId(branchId)
     return res.json(orders)
   } catch (error) {
+    console.error('getBranchOrders error:', error);
     return res.status(500).json({ message: 'Failed to fetch branch orders', error: error.message })
   }
 }

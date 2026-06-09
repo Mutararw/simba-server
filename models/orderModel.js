@@ -285,8 +285,9 @@ export const getOrdersByUserId = async (userId) => {
   })
 }
 export const getOrdersByBranchId = async (branchId) => {
+  const normalizedBranchId = branchId.trim().toLowerCase();
   const orders = await prisma.order.findMany({
-    where: { branchId },
+    where: { branchId: normalizedBranchId },
     include: {
       user: { select: { name: true, email: true } },
       items: {
