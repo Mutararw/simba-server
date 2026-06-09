@@ -169,6 +169,30 @@ export const createOrderWithItems = async ({ userId, items, branchId, orderType,
       }
     })
 
+    // Notify branch staff and manager
+    if (branchId) {
+      const branchStaff = await tx.user.findMany({
+        where: {
+          OR: [
+            { branchId, accountType: 'manager' },
+            { branchId, accountType: 'admin' },
+            { branchId, accountType: 'staff' }
+          ]
+        },
+        select: { id: true }
+      })
+
+      if (branchStaff.length > 0) {
+        await tx.notification.createMany({
+          data: branchStaff.map(staff => ({
+            userId: staff.id,
+            title: 'New Order Received',
+            message: `A new order #${order.id} has been placed for pickup at ${pickupTime}.`
+          }))
+        })
+      }
+    }
+
     for (const item of normalizedItems) {
       await tx.orderItem.create({
         data: {
