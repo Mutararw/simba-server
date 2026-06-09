@@ -66,15 +66,34 @@ const buildBranchStockError = async (tx, { productId, quantity, branchId, produc
 
 export const createOrderWithItems = async ({ userId, items, branchId, orderType, pickupTime, phone, paymentMethod }) => {
   // Ensure user exists (for guest checkout)
-  await prisma.user.upsert({
-    where: { id: userId },
-    update: {},
-    create: {
-      id: userId,
-      name: 'Guest User',
-      email: `guest_${userId}@simba.com`,
+  if (userId === 'guest-user') {
+    await prisma.user.upsert({
+      where: { id: userId },
+      update: {
+        name: 'Guest User',
+      },
+      create: {
+        id: userId,
+        name: 'Guest User',
+        email: `guest_checkout_${Date.now()}@simba.com`, // Use a more unique email for creation if needed, though id should match
+      }
+    }).catch(err => {
+      console.error('Guest user upsert failed, continuing anyway...', err.message)
+    })
+  } else {
+    // Verify real user exists
+    const userExists = await prisma.user.findUnique({ where: { id: userId } })
+    if (!userExists) {
+        // Fallback create for missing users to prevent FK errors
+        await prisma.user.create({
+            data: {
+                id: userId,
+                name: 'Unknown User',
+                email: `user_${userId}@simba.com`
+            }
+        }).catch(() => {})
     }
-  })
+  }
 
   return prisma.$transaction(async (tx) => {
     let totalAmount = 0

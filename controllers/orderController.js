@@ -9,8 +9,10 @@ export const createOrder = async (req, res) => {
       return res.status(400).json({ message: 'Order items are required' })
     }
 
+    const userId = req.user?.id || 'guest-user'
+
     const order = await createOrderWithItems({
-      userId: req.user.id,
+      userId,
       items,
       branchId,
       orderType,
