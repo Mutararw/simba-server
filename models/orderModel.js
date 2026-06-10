@@ -313,15 +313,36 @@ export const getOrdersByBranchId = async (branchId) => {
 }
 
 export const updateOrderStatus = async (orderId, { status, isAccepted }) => {
+  const currentOrder = await prisma.order.findUnique({
+    where: { id: BigInt(orderId) }
+  })
+
+  if (!currentOrder) {
+    throw new Error('Order not found')
+  }
+
   const data = {}
   if (status) data.status = status
+  
   if (isAccepted !== undefined) {
-    data.isAccepted = isAccepted
-    // If accepted, set payment to paid and move to completed/ready if it was pending
-    if (isAccepted) {
-      data.paymentStatus = "paid"
-      data.status = "completed" // Automatically move to completed so it's "given to customer"
+    if (isAccepted === true) {
+      // Check if paid before accepting
+      if (currentOrder.paymentStatus !== 'paid') {
+        const error = new Error('Order cannot be accepted until it is paid')
+        error.status = 400
+        throw error
+      }
+      data.isAccepted = true
+      data.status = "accepted" // Move to accepted status
+    } else {
+      data.isAccepted = false
     }
+  }
+
+  // Handle explicit decline
+  if (status === 'declined') {
+    data.isAccepted = false
+    data.status = 'declined'
   }
 
   const order = await prisma.order.update({
