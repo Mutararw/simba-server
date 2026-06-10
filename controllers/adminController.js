@@ -84,12 +84,79 @@ export const getSystemStats = async (req, res) => {
       userCount: branch._count.users
     }))
 
+    // Get Top Products by Revenue
+    const orderItems = await prisma.orderItem.findMany({
+      where: {
+        order: { status: 'completed' }
+      },
+      include: {
+        product: true
+      }
+    })
+
+    const productSales = {}
+    const categorySales = {}
+
+    orderItems.forEach(item => {
+      const revenue = Number(item.price) * item.quantity
+      
+      // Product mapping
+      if (!productSales[item.productId]) {
+        productSales[item.productId] = { 
+          name: item.product.name, 
+          revenue: 0, 
+          salesCount: 0,
+          category: item.product.category
+        }
+      }
+      productSales[item.productId].revenue += revenue
+      productSales[item.productId].salesCount += item.quantity
+
+      // Category mapping
+      const cat = item.product.category || 'General'
+      if (!categorySales[cat]) {
+        categorySales[cat] = 0
+      }
+      categorySales[cat] += revenue
+    })
+
+    const topProducts = Object.values(productSales)
+      .sort((a, b) => b.revenue - a.revenue)
+      .slice(0, 5)
+
+    const salesByCategory = Object.entries(categorySales).map(([name, value]) => ({
+      name,
+      value
+    }))
+
+    // Recent Global Transactions
+    const recentOrders = await prisma.order.findMany({
+      take: 10,
+      orderBy: { createdAt: 'desc' },
+      include: {
+        user: { select: { name: true } },
+        branch: { select: { name: true } }
+      }
+    })
+
+    const formattedRecentOrders = recentOrders.map(o => ({
+      id: Number(o.id),
+      customer: o.user.name,
+      branch: o.branch?.name || 'N/A',
+      amount: Number(o.totalAmount),
+      status: o.status,
+      date: o.createdAt
+    }))
+
     return res.json({
       totalRevenue: Number(totalRevenue._sum.totalAmount || 0),
       totalOrders,
       totalUsers,
       activeBranches,
-      branchStats: formattedBranchStats
+      branchStats: formattedBranchStats,
+      topProducts,
+      salesByCategory,
+      recentTransactions: formattedRecentOrders
     })
   } catch (error) {
     return res.status(500).json({ message: 'Failed to fetch system stats', error: error.message })
