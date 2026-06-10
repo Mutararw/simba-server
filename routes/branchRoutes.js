@@ -8,7 +8,8 @@ import {
   getBranchRecommendations,
   getBranchStats,
   deleteBranchUser,
-  getBranchCustomers
+  getBranchCustomers,
+  getBranchPayments
 } from '../controllers/branchController.js'
 import { authenticateToken, optionalAuthenticateToken } from '../middleware/authMiddleware.js'
 
@@ -24,6 +25,8 @@ router.get('/users', authenticateToken, getBranchUsers)
 router.get('/users/:branchId', authenticateToken, getBranchUsers)
 router.get('/customers', authenticateToken, getBranchCustomers)
 router.get('/customers/:branchId', authenticateToken, getBranchCustomers)
+router.get('/payments', authenticateToken, getBranchPayments)
+router.get('/payments/:branchId', authenticateToken, getBranchPayments)
 router.delete('/users/:userId', authenticateToken, deleteBranchUser)
 router.patch('/users/:userId/role', authenticateToken, updateUserRole)
 

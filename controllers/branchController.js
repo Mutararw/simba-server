@@ -14,19 +14,26 @@ export const getBranchInventory = async (req, res) => {
     const branchId = req.user.branchId || req.params.branchId
     if (!branchId) return res.status(400).json({ message: 'Branch ID required' })
 
-    const stocks = await prisma.branchStock.findMany({
-      where: { branchId },
-      include: {
-        product: true
-      }
+    // Fetch all products
+    const allProducts = await prisma.product.findMany({
+      orderBy: { name: 'asc' }
     })
 
-    const inventory = stocks.map(s => ({
-      productId: Number(s.product.id),
-      name: s.product.name,
-      price: Number(s.product.price),
-      stock: s.stock,
-      imageUrl: s.product.imageUrl
+    // Fetch branch-specific stock
+    const branchStocks = await prisma.branchStock.findMany({
+      where: { branchId }
+    })
+
+    // Create a map for quick lookup
+    const stockMap = new Map(branchStocks.map(s => [s.productId.toString(), s.stock]))
+
+    const inventory = allProducts.map(p => ({
+      productId: Number(p.id),
+      name: p.name,
+      price: Number(p.price),
+      stock: stockMap.get(p.id.toString()) || 0,
+      imageUrl: p.imageUrl,
+      category: p.category
     }))
 
     res.json(inventory)
@@ -253,5 +260,36 @@ export const getBranchCustomers = async (req, res) => {
     res.json(customers)
   } catch (error) {
     res.status(500).json({ message: 'Failed to fetch branch customers', error: error.message })
+  }
+}
+
+export const getBranchPayments = async (req, res) => {
+  try {
+    const branchId = req.user.branchId || req.params.branchId
+    if (!branchId) return res.status(400).json({ message: 'Branch ID required' })
+
+    const orders = await prisma.order.findMany({
+      where: { branchId },
+      include: {
+        user: {
+          select: { name: true, email: true }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    })
+
+    const payments = orders.map(order => ({
+      id: Number(order.id),
+      customerName: order.user.name,
+      amount: Number(order.totalAmount),
+      status: order.status,
+      paymentStatus: order.paymentStatus,
+      paymentMethod: order.paymentMethod,
+      createdAt: order.createdAt
+    }))
+
+    res.json(payments)
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to fetch payment history', error: error.message })
   }
 }
