@@ -25,8 +25,24 @@ model User {
   sentMessages     ChatMessage[] @relation("SentMessages")
   receivedMessages ChatMessage[] @relation("ReceivedMessages")
   notifications    Notification[]
+  createdMeetings  Meeting[]      @relation("CreatedMeetings")
+  invitedMeetings  Meeting[]      @relation("MeetingParticipants")
 
   @@index([accountType])
+}
+
+model Meeting {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  startTime   DateTime @default(now())
+  endTime     DateTime?
+  status      String   @default("active") // active, completed, cancelled
+  creatorId   String
+  creator     User     @relation("CreatedMeetings", fields: [creatorId], references: [id])
+  participants User[]  @relation("MeetingParticipants")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 model Notification {

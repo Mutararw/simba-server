@@ -15,6 +15,7 @@ import chatRoutes from './routes/chatRoutes.js'
 import notificationRoutes from './routes/notificationRoutes.js'
 import aiRoutes from './routes/aiRoutes.js'
 import adminRoutes from './routes/adminRoutes.js'
+import meetingRoutes from './routes/meetingRoutes.js'
 import { authHandler } from './lib/auth.js'
 import { prisma } from './lib/prisma.js'
 
@@ -85,6 +86,7 @@ app.use('/api/chat', chatRoutes)
 app.use('/api/notifications', notificationRoutes)
 app.use('/api/ai', aiRoutes)
 app.use('/api/admin', adminRoutes)
+app.use('/api/meetings', meetingRoutes)
 
 app.use((error, _req, res, _next) => {
   return res.status(500).json({

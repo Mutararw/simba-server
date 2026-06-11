@@ -164,25 +164,45 @@ export const getSystemStats = async (req, res) => {
 }
 export const getGlobalInventory = async (req, res) => {
   try {
-    const stocks = await prisma.branchStock.findMany({
+    const products = await prisma.product.findMany({
       include: {
-        product: true,
-        branch: true
+        branchStocks: {
+          include: { branch: true }
+        }
+      },
+      orderBy: { name: 'asc' }
+    })
+
+    const formatted = []
+    products.forEach(p => {
+      if (p.branchStocks.length === 0) {
+        formatted.push({
+          productId: Number(p.id),
+          name: p.name,
+          category: p.category,
+          price: Number(p.price),
+          stock: 0,
+          branchName: 'Catalog (No Stock)',
+          branchId: null,
+          imageUrl: p.imageUrl
+        })
+      } else {
+        p.branchStocks.forEach(s => {
+          formatted.push({
+            productId: Number(p.id),
+            name: p.name,
+            category: p.category,
+            price: Number(p.price),
+            stock: s.stock,
+            branchName: s.branch?.name || 'Unknown',
+            branchId: s.branchId,
+            imageUrl: p.imageUrl
+          })
+        })
       }
     })
 
-    const formattedStocks = stocks.map(s => ({
-      productId: Number(s.product.id),
-      name: s.product.name,
-      category: s.product.category,
-      price: Number(s.product.price),
-      stock: s.stock,
-      branchName: s.branch.name,
-      branchId: s.branchId,
-      imageUrl: s.product.imageUrl
-    }))
-
-    res.json(formattedStocks)
+    res.json(formatted)
   } catch (error) {
     res.status(500).json({ message: 'Failed to fetch global inventory', error: error.message })
   }
