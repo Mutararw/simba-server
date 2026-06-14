@@ -6,9 +6,10 @@ import {
   deleteProduct
 } from '../models/productModel.js'
 
-export const listProducts = async (_req, res) => {
+export const listProducts = async (req, res) => {
   try {
-    const products = await getAllProducts()
+    const { search, category, minPrice, maxPrice, inStock, sortBy, order } = req.query
+    const products = await getAllProducts({ search, category, minPrice, maxPrice, inStock, sortBy, order })
     return res.json(products)
   } catch (error) {
     return res.status(500).json({ message: 'Failed to fetch products', error: error.message })

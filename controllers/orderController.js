@@ -3,7 +3,10 @@ import { createOrderWithItems, getOrdersByUserId, updateOrderStatus, getOrdersBy
 
 export const createOrder = async (req, res) => {
   try {
-    const { items, branchId, orderType, pickupTime, phone, paymentMethod } = req.body
+    const { 
+      items, branchId, orderType, pickupTime, phone, 
+      paymentMethod, address, district, zone, deliveryFee, deliverySlot 
+    } = req.body
 
     if (!Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ message: 'Order items are required' })
@@ -18,7 +21,12 @@ export const createOrder = async (req, res) => {
       orderType,
       pickupTime,
       phone,
-      paymentMethod
+      paymentMethod,
+      address,
+      district,
+      zone,
+      deliveryFee,
+      deliverySlot
     })
 
     return res.status(201).json(order)

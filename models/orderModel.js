@@ -11,6 +11,11 @@ const toOrderDto = (order) => ({
   branchId: order.branchId,
   pickupTime: order.pickupTime,
   phone: order.phone,
+  address: order.address,
+  district: order.district,
+  zone: order.zone,
+  deliveryFee: Number(order.deliveryFee || 0),
+  deliverySlot: order.deliverySlot,
   paymentMethod: order.paymentMethod,
   paymentStatus: order.paymentStatus || "pending",
   paymentReference: order.paymentReference,
@@ -64,7 +69,10 @@ const buildBranchStockError = async (tx, { productId, quantity, branchId, produc
   throw error
 }
 
-export const createOrderWithItems = async ({ userId, items, branchId, orderType, pickupTime, phone, paymentMethod }) => {
+export const createOrderWithItems = async ({ 
+  userId, items, branchId, orderType, pickupTime, phone, 
+  paymentMethod, address, district, zone, deliveryFee, deliverySlot 
+}) => {
   // Ensure user exists (for guest checkout)
   if (userId === 'guest-user') {
     await prisma.user.upsert({
@@ -159,12 +167,17 @@ export const createOrderWithItems = async ({ userId, items, branchId, orderType,
       data: {
         userId,
         totalAmount,
-        status: 'pending',
+        status: 'Placed',
         orderType: orderType || 'shopping',
         isAccepted: false,
         branchId,
         pickupTime,
         phone,
+        address,
+        district,
+        zone,
+        deliveryFee: deliveryFee || 0,
+        deliverySlot,
         paymentMethod: paymentMethod || "momo"
       }
     })

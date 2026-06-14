@@ -8,10 +8,13 @@ const mapProduct = (product) => ({
   id: BigInt(product.id),
   name: product.name,
   category: product.category || 'General',
-  description: product.unit ? `Unit: ${product.unit}` : null,
+  subcategoryId: product.subcategoryId || null,
+  unit: product.unit || 'Pcs',
+  description: product.description || null,
   price: Number(product.price || 0),
   stock: product.inStock ? 100 : 0,
-  imageUrl: product.image || null
+  imageUrl: product.image || null,
+  rating: 0
 })
 
 const chunk = (items, size) => {
