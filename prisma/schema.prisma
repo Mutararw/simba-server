@@ -11,7 +11,7 @@ model User {
   name          String
   email         String    @unique
   phone         String?   // Rwandan phone
-  emailVerified Boolean   @default(false)
+  emailVerified DateTime? @db.Timestamptz()
   image         String?
   accountType   String    @default("user")
   isApproved    Boolean   @default(true)
