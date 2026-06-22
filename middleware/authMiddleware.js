@@ -53,6 +53,8 @@ export const optionalAuthenticateToken = async (req, res, next) => {
   }
 }
 
+export const protect = authenticateToken
+
 export const authorizeProductAdmins = (req, res, next) => {
   if (req.user?.accountType !== 'admin') {
     return res.status(403).json({ message: 'Admin access required' })

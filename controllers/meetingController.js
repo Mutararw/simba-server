@@ -2,9 +2,32 @@ import { prisma } from '../lib/prisma.js'
 
 export const createMeeting = async (req, res) => {
   const { title, description, participantIds } = req.body
-  const creatorId = req.user.id // Assuming req.user is populated by auth middleware
+  const creatorId = req.user.id
+
+  if (!title || typeof title !== 'string') {
+    return res.status(400).json({ message: 'Meeting title is required' })
+  }
+
+  if (!Array.isArray(participantIds) || participantIds.length === 0) {
+    return res.status(400).json({ message: 'At least one participant is required' })
+  }
 
   try {
+    const existingUsers = await prisma.user.findMany({
+      where: { id: { in: participantIds } },
+      select: { id: true }
+    })
+
+    const validIds = new Set(existingUsers.map(u => u.id))
+    const invalidIds = participantIds.filter(id => !validIds.has(id))
+
+    if (invalidIds.length > 0) {
+      return res.status(400).json({
+        message: 'Some participants no longer exist in the system',
+        invalidIds
+      })
+    }
+
     const meeting = await prisma.meeting.create({
       data: {
         title,
@@ -15,12 +38,12 @@ export const createMeeting = async (req, res) => {
         }
       },
       include: {
-        participants: true
+        creator: { select: { id: true, name: true } },
+        participants: { select: { id: true, name: true, email: true } }
       }
     })
 
-    // Create notifications for all participants
-    await Promise.all(participantIds.map(userId => 
+    await Promise.all(participantIds.map(userId =>
       prisma.notification.create({
         data: {
           userId,
