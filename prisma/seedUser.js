@@ -1,44 +1,59 @@
 import { prisma } from '../lib/prisma.js'
 import { auth } from '../lib/auth.js'
 
-const SEED_USER = {
-  name: 'david',
-  email: 'davidkajyojyintwari@gmail.com',
-  password: 'Mutara12'
-}
+const SEED_USERS = [
+  {
+    name: 'david',
+    email: 'davidkajyojyintwari@gmail.com',
+    password: 'Mutara123',
+    accountType: 'admin',
+    adminRole: 'manager',
+    isApproved: true
+  },
+  {
+    name: 'Test Customer',
+    email: 'test@customer.gmail.com',
+    password: 'Testing123',
+    accountType: 'user',
+    isApproved: true
+  }
+]
 
 export async function seedDefaultUser() {
-  try {
-    const existing = await prisma.user.findUnique({ where: { email: SEED_USER.email } })
-    if (existing) {
-      console.log('Seed user already exists, skipping')
-      return
-    }
+  for (const u of SEED_USERS) {
+    try {
+      const existing = await prisma.user.findUnique({ where: { email: u.email } })
+      if (existing) {
+        console.log(`Seed user ${u.email} already exists, skipping`)
+        continue
+      }
 
-    await auth.api.signUpEmail({
-      body: {
-        name: SEED_USER.name,
-        email: SEED_USER.email,
-        password: SEED_USER.password,
-        accountType: 'admin',
-        adminRole: 'manager',
-        isApproved: true,
-        emailVerified: new Date()
-      },
-      headers: new Headers({ 'content-type': 'application/json' })
-    })
-    console.log('Seed user created successfully')
-  } catch (error) {
-    if (
-      error.message?.includes('Unique constraint') ||
-      error.message?.includes('already exists') ||
-      error.message?.toLowerCase().includes('email_already_exists')
-    ) {
-      console.log('Seed user already exists (caught)')
-    } else if (error.message?.includes('emailVerified')) {
-      console.log('Seed user creation skipped (emailVerified compatibility issue)')
-    } else {
-      console.error('Failed to seed user:', error.message)
+      await auth.api.signUpEmail({
+        body: {
+          name: u.name,
+          email: u.email,
+          password: u.password,
+          accountType: u.accountType,
+          adminRole: u.adminRole || null,
+          isApproved: u.isApproved,
+          emailVerified: new Date()
+        },
+        headers: new Headers({ 'content-type': 'application/json' })
+      })
+      console.log(`Seed user ${u.email} created successfully`)
+    } catch (error) {
+      const msg = error?.message || String(error)
+      if (
+        msg.includes('Unique constraint') ||
+        msg.includes('already exists') ||
+        msg.toLowerCase().includes('email_already_exists')
+      ) {
+        console.log(`Seed user ${u.email} already exists (caught)`)
+      } else if (msg.includes('emailVerified')) {
+        console.log(`Seed user ${u.email} creation skipped (emailVerified compatibility issue)`)
+      } else {
+        console.error(`Failed to seed user ${u.email}:`, msg)
+      }
     }
   }
 }
