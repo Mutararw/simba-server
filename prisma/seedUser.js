@@ -41,12 +41,20 @@ export async function seedDefaultUser() {
           password: u.password,
           accountType: u.accountType,
           adminRole: u.adminRole || null,
-          isApproved: u.isApproved,
           emailVerified: new Date()
         },
         headers: new Headers({ 'content-type': 'application/json' })
       })
       console.log(`Seed user ${u.email} created successfully`)
+
+      // Manually approve the user to ensure isApproved is set correctly
+      if (u.isApproved) {
+        await prisma.user.update({
+          where: { email: u.email },
+          data: { isApproved: true }
+        })
+        console.log(`Seed user ${u.email} approved`)
+      }
     } catch (error) {
       const msg = error?.message || String(error)
       if (
