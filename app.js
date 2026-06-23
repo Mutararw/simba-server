@@ -56,12 +56,17 @@ app.use(
   })
 )
 
-app.use((req, res, next) => {
+app.use(async (req, res, next) => {
   if (!req.path.startsWith('/api/auth')) {
     return next()
   }
 
-  return authHandler(req, res)
+  try {
+    await authHandler(req, res)
+  } catch (error) {
+    console.error('Auth handler error:', error)
+    return res.status(500).json({ message: 'Auth handler error', error: error.message })
+  }
 })
 
 app.use(express.json())
