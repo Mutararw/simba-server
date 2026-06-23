@@ -21,3 +21,5 @@ services:
         sync: false
       - key: TRUSTED_ORIGINS
         sync: false
+      - key: AUTO_APPROVE_STAFF
+        value: "true"
