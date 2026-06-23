@@ -24,8 +24,14 @@ export async function seedDefaultUser() {
     try {
       const existing = await prisma.user.findUnique({ where: { email: u.email } })
       if (existing) {
-        console.log(`Seed user ${u.email} already exists, skipping`)
-        continue
+        console.log(`Seed user ${u.email} already exists, deleting to recreate with new password`)
+        try {
+          await prisma.user.delete({ where: { email: u.email } })
+          console.log(`Deleted existing user ${u.email}`)
+        } catch (delErr) {
+          console.error(`Failed to delete existing user ${u.email}:`, delErr?.message || delErr)
+          continue
+        }
       }
 
       await auth.api.signUpEmail({
