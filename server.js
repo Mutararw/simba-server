@@ -5,6 +5,18 @@ import { seedDefaultUser } from './prisma/seedUser.js'
 
 const PORT = process.env.PORT || 5000
 
+const BRANCHES = [
+  { id: "remera", name: "Simba Supermarket Remera" },
+  { id: "kimironko", name: "Simba Supermarket Kimironko" },
+  { id: "kacyiru", name: "Simba Supermarket Kacyiru" },
+  { id: "nyamirambo", name: "Simba Supermarket Nyamirambo" },
+  { id: "gikondo", name: "Simba Supermarket Gikondo" },
+  { id: "kanombe", name: "Simba Supermarket Kanombe" },
+  { id: "kinyinya", name: "Simba Supermarket Kinyinya" },
+  { id: "kibagabaga", name: "Simba Supermarket Kibagabaga" },
+  { id: "nyanza", name: "Simba Supermarket Nyanza" },
+]
+
 process.on('unhandledRejection', (reason) => {
   console.error('Unhandled Rejection:', reason)
 })
@@ -13,13 +25,26 @@ process.on('uncaughtException', (error) => {
   console.error('Uncaught Exception:', error)
 })
 
+const seedBranches = async () => {
+  console.log('Seeding branches...')
+  for (const b of BRANCHES) {
+    await prisma.branch.upsert({
+      where: { id: b.id },
+      update: { name: b.name },
+      create: { id: b.id, name: b.name, location: b.id }
+    })
+  }
+  console.log('Branches seeded.')
+}
+
 const startServer = async () => {
   try {
     console.log('Connecting to database...')
     await prisma.$connect()
     console.log('Database connected. Verifying connection...')
     await prisma.$queryRaw`SELECT 1`
-    console.log('Connection verified. Seeding default user...')
+    console.log('Connection verified. Seeding data...')
+    await seedBranches()
     await seedDefaultUser()
     console.log('Starting server...')
     const server = app.listen(PORT, () => {

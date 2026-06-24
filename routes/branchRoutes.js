@@ -15,7 +15,7 @@ import { authenticateToken, optionalAuthenticateToken } from '../middleware/auth
 
 const router = express.Router()
 
-router.get('/', authenticateToken, getBranches)
+router.get('/', optionalAuthenticateToken, getBranches)
 router.get('/stats', authenticateToken, getBranchStats)
 router.get('/inventory', authenticateToken, getBranchInventory)
 router.get('/inventory/:branchId', authenticateToken, getBranchInventory)
