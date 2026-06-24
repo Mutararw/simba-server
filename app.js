@@ -50,6 +50,11 @@ app.use(
         return callback(null, true)
       }
 
+      if (process.env.NODE_ENV === 'production') {
+        console.warn(`CORS: Allowing unknown origin: ${origin}`)
+        return callback(null, origin)
+      }
+
       return callback(new Error('Origin not allowed by CORS'))
     },
     credentials: true
