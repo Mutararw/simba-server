@@ -45,24 +45,64 @@ export const getContacts = async (req, res) => {
     const userId = req.user.id
     const user = await prisma.user.findUnique({ where: { id: userId } })
 
-    let contacts = []
+    const userContacts = []
     if (user.accountType === 'manager') {
-      // Manager can chat with admins and suppliers (suppliers need user accounts for real chat, but let's assume admins for now)
-      contacts = await prisma.user.findMany({
+      const admins = await prisma.user.findMany({
         where: { accountType: 'admin' },
         select: { id: true, name: true, accountType: true }
       })
+      userContacts.push(...admins)
     } else if (user.accountType === 'admin') {
-      // Admin can chat with all managers
-      contacts = await prisma.user.findMany({
+      const managers = await prisma.user.findMany({
         where: { accountType: 'manager' },
         select: { id: true, name: true, accountType: true, branchId: true }
       })
+      userContacts.push(...managers)
+    } else if (user.accountType === 'supplier') {
+      const admins = await prisma.user.findMany({
+        where: { accountType: 'admin' },
+        select: { id: true, name: true, accountType: true }
+      })
+      userContacts.push(...admins)
     }
+
+    // For admins and managers, also include suppliers as contacts
+    const supplierUsers = await prisma.user.findMany({
+      where: { accountType: 'supplier' },
+      select: { id: true, name: true, accountType: true }
+    })
+    userContacts.push(...supplierUsers)
+
+    // Deduplicate by id
+    const seen = new Set()
+    const contacts = userContacts.filter(c => {
+      if (seen.has(c.id)) return false
+      seen.add(c.id)
+      return true
+    })
 
     res.json(contacts)
   } catch (error) {
     res.status(500).json({ message: 'Failed to fetch contacts', error: error.message })
+  }
+}
+
+export const getSuppliers = async (req, res) => {
+  try {
+    const suppliers = await prisma.supplier.findMany({
+      include: { branch: { select: { name: true } } },
+      orderBy: { name: 'asc' }
+    })
+    res.json(suppliers.map(s => ({
+      id: s.id,
+      name: s.name,
+      email: s.email,
+      phone: s.phone,
+      branch: s.branch?.name || 'All',
+      category: s.name.includes('Dairy') ? 'Dairy' : s.name.includes('Grains') ? 'Grains' : 'General'
+    })))
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to fetch suppliers', error: error.message })
   }
 }
 export const broadcastMessage = async (req, res) => {

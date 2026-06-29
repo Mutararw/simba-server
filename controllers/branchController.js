@@ -166,6 +166,41 @@ export const getBranchRecommendations = async (req, res) => {
     res.status(500).json({ message: 'Failed to fetch branch recommendations', error: error.message })
   }
 }
+
+export const updateBranchStock = async (req, res) => {
+  try {
+    const branchId = req.user.branchId || req.body.branchId
+    const { productId, quantity } = req.body
+    if (!branchId || !productId || quantity === undefined) {
+      return res.status(400).json({ message: 'Missing required fields' })
+    }
+    const stock = await prisma.branchStock.upsert({
+      where: { branchId_productId: { branchId, productId: BigInt(productId) } },
+      update: { stock: Number(quantity) },
+      create: { branchId, productId: BigInt(productId), stock: Number(quantity) }
+    })
+    res.json(stock)
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to update branch stock', error: error.message })
+  }
+}
+
+export const deleteBranchStock = async (req, res) => {
+  try {
+    const branchId = req.user.branchId || req.params.branchId
+    const { productId } = req.params
+    if (!branchId || !productId) {
+      return res.status(400).json({ message: 'Missing required fields' })
+    }
+    await prisma.branchStock.delete({
+      where: { branchId_productId: { branchId, productId: BigInt(productId) } }
+    })
+    res.json({ message: 'Product removed from branch stock' })
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to remove product', error: error.message })
+  }
+}
+
 export const getBranchStats = async (req, res) => {
   try {
     const branchId = req.user.branchId || req.params.branchId

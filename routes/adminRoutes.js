@@ -6,7 +6,8 @@ import {
   getSystemStats,
   getGlobalInventory,
   getPendingUsers,
-  approveUser
+  approveUser,
+  getAllOrders
 } from '../controllers/adminController.js'
 import { authenticateToken } from '../middleware/authMiddleware.js'
 
@@ -30,5 +31,6 @@ router.get('/stats', getSystemStats)
 router.get('/inventory', getGlobalInventory)
 router.get('/pending-users', getPendingUsers)
 router.post('/users/:userId/approve', approveUser)
+router.get('/orders', getAllOrders)
 
 export default router

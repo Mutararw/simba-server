@@ -12,7 +12,7 @@ export const processAiQuery = async (req, res) => {
 
     const apiKey = process.env.GROQ_API_KEY;
     if (!apiKey) {
-      return res.status(500).json({ error: 'Groq API Key not configured on the server.' });
+      return res.status(500).json({ error: 'AI API Key not configured on the server.' });
     }
 
     // Fetch products to give context to the AI and for hydrating the response
@@ -62,14 +62,14 @@ INSTRUCTIONS:
 }
 NEVER output raw markdown, only the raw JSON string.`;
 
-    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    const response = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'llama-3.1-8b-instant',
+        model: 'meta/llama-3.1-8b-instruct',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: query }
@@ -81,7 +81,7 @@ NEVER output raw markdown, only the raw JSON string.`;
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('Groq API Error:', errorText);
+      console.error('AI API Error:', errorText);
       return res.json({
         reply: "I'm sorry, I'm having trouble processing your request right now. Please contact our support team directly:\n- Phone: +250 788 000 000\n- Instagram: https://www.instagram.com/simbasupermarketrwanda",
         productIds: [],

@@ -251,3 +251,52 @@ export const approveUser = async (req, res) => {
     return res.status(500).json({ message: 'Action failed', error: error.message })
   }
 }
+
+export const getAllOrders = async (req, res) => {
+  try {
+    const orders = await prisma.order.findMany({
+      include: {
+        user: { select: { name: true, email: true } },
+        items: {
+          include: {
+            product: { select: { name: true, imageUrl: true } }
+          }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    })
+
+    return res.json(orders.map(order => ({
+      id: Number(order.id),
+      orderId: Number(order.id),
+      userId: order.userId,
+      customerName: order.user.name,
+      totalAmount: Number(order.totalAmount),
+      status: order.status,
+      orderType: order.orderType,
+      isAccepted: order.isAccepted,
+      branchId: order.branchId,
+      pickupTime: order.pickupTime,
+      phone: order.phone,
+      address: order.address,
+      district: order.district,
+      zone: order.zone,
+      deliveryFee: Number(order.deliveryFee || 0),
+      deliverySlot: order.deliverySlot,
+      paymentMethod: order.paymentMethod,
+      paymentStatus: order.paymentStatus || "pending",
+      paymentReference: order.paymentReference,
+      createdAt: order.createdAt,
+      items: order.items.map(item => ({
+        orderItemId: Number(item.id),
+        productId: Number(item.productId),
+        productName: item.product.name,
+        imageUrl: item.product.imageUrl,
+        quantity: item.quantity,
+        unitPrice: Number(item.unitPrice)
+      }))
+    })))
+  } catch (error) {
+    return res.status(500).json({ message: 'Failed to fetch all orders', error: error.message })
+  }
+}
