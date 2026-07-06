@@ -43,17 +43,19 @@ export const createMeeting = async (req, res) => {
       }
     })
 
+    const meetingLink = `https://meet.jit.si/Simba_${meeting.id}`
+
     await Promise.all(participantIds.map(userId =>
       prisma.notification.create({
         data: {
           userId,
           title: 'New Meeting Invitation',
-          message: `You have been invited to a meeting: ${title}. Click to join.`
+          message: `You have been invited to a meeting: ${title}. Join here: ${meetingLink}`
         }
       })
     ))
 
-    return res.status(201).json(meeting)
+    return res.status(201).json({ ...meeting, meetingLink })
   } catch (error) {
     return res.status(500).json({ message: 'Failed to create meeting', error: error.message })
   }
@@ -76,7 +78,13 @@ export const getMyMeetings = async (req, res) => {
       },
       orderBy: { startTime: 'desc' }
     })
-    return res.json(meetings)
+
+    const meetingsWithLink = meetings.map(m => ({
+      ...m,
+      meetingLink: `https://meet.jit.si/Simba_${m.id}`
+    }))
+
+    return res.json(meetingsWithLink)
   } catch (error) {
     return res.status(500).json({ message: 'Failed to fetch meetings', error: error.message })
   }
