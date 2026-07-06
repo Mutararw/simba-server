@@ -82,6 +82,29 @@ export const getMyMeetings = async (req, res) => {
   }
 }
 
+export const lookupUserByEmail = async (req, res) => {
+  const { email } = req.query
+
+  if (!email || typeof email !== 'string') {
+    return res.status(400).json({ message: 'Email query parameter is required' })
+  }
+
+  try {
+    const user = await prisma.user.findUnique({
+      where: { email: email.toLowerCase().trim() },
+      select: { id: true, name: true, email: true, accountType: true }
+    })
+
+    if (!user) {
+      return res.status(404).json({ message: 'No user found with that email' })
+    }
+
+    return res.json(user)
+  } catch (error) {
+    return res.status(500).json({ message: 'Failed to lookup user', error: error.message })
+  }
+}
+
 export const endMeeting = async (req, res) => {
   const { meetingId } = req.params
   try {
