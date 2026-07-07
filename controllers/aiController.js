@@ -136,7 +136,9 @@ BEHAVIOR:
 - When recommending, mention the product name and price in RWF, and why it's a good choice.
 - If the user wants to buy/add to cart, include the product IDs in addToCartIds.
 - Suggest complementary products when appropriate.
-- For unrelated questions, politely redirect to info@Simbasupermarket.rw or +250 788 000 000.`
+- For unrelated questions, politely redirect to info@Simbasupermarket.rw or +250 788 000 000.
+
+You must respond in valid JSON format. Use the searchProducts tool whenever you need product information.`
 
     // Step 1: Send query to Groq with tool definitions (no response_format)
     const msg1 = await callGroq(
