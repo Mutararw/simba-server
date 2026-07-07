@@ -45,15 +45,18 @@ export const createMeeting = async (req, res) => {
 
     const meetingLink = `https://meet.jit.si/Simba_${meeting.id}`
 
-    await Promise.all(participantIds.map(userId =>
-      prisma.notification.create({
-        data: {
-          userId,
-          title: 'New Meeting Invitation',
-          message: `You have been invited to a meeting: ${title}. Join here: ${meetingLink}`
-        }
-      })
-    ))
+    const notifyIds = participantIds.filter(id => id !== creatorId)
+    if (notifyIds.length > 0) {
+      await Promise.all(notifyIds.map(userId =>
+        prisma.notification.create({
+          data: {
+            userId,
+            title: 'New Meeting Invitation',
+            message: `You have been invited to a meeting: ${title}. Join here: ${meetingLink}`
+          }
+        })
+      ))
+    }
 
     return res.status(201).json({ ...meeting, meetingLink })
   } catch (error) {

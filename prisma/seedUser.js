@@ -11,6 +11,14 @@ const SEED_USERS = [
     isApproved: true
   },
   {
+    name: 'david',
+    email: 'david.kajyojyi@a2sv.org',
+    password: 'Mutara123',
+    accountType: 'admin',
+    adminRole: 'manager',
+    isApproved: true
+  },
+  {
     name: 'Test Customer',
     email: 'test@customer.gmail.com',
     password: 'Testing123',

@@ -1,149 +1,257 @@
 import { prisma } from '../lib/prisma.js'
 
-export const processAiQuery = async (req, res) => {
-  try {
-    console.log('AI Request Body:', req.body);
-    console.log('AI Request Headers:', req.headers);
-    const { query } = req.body || {};
-    
-    if (!query) {
-      return res.status(400).json({ error: 'Query is required' });
-    }
-
-    const apiKey = process.env.GROQ_API_KEY;
-    if (!apiKey) {
-      return res.status(500).json({ error: 'AI API Key not configured on the server.' });
-    }
-
-    // Fetch products to give context to the AI and for hydrating the response
-    const allProducts = await prisma.product.findMany({
-      select: {
-        id: true,
-        name: true,
-        category: true,
-        price: true,
-        stock: true,
-        imageUrl: true
+const tools = [
+  {
+    type: "function",
+    function: {
+      name: "searchProducts",
+      description: "Search for products in Simba Supermarket catalog by name, category, or keywords. Call this whenever the user asks about products, wants recommendations, wants to buy something, or asks about specific items.",
+      parameters: {
+        type: "object",
+        properties: {
+          query: {
+            type: "string",
+            description: "The search term to find matching products (e.g. 'milk', 'breakfast', 'rice', 'cooking oil')"
+          },
+          category: {
+            type: "string",
+            description: "Optional category to filter results"
+          },
+          minPrice: {
+            type: "number",
+            description: "Optional minimum price in RWF"
+          },
+          maxPrice: {
+            type: "number",
+            description: "Optional maximum price in RWF"
+          }
+        },
+        required: ["query"]
       }
-    });
+    }
+  }
+]
 
-    // Create a safe context avoiding BigInt serialization issues
-    // Include products with name and price so the AI can handle price range queries
-    // Using compact array format to minimize token usage
-    const contextProducts = allProducts.slice(0, 200).map(p => [p.id.toString(), p.name, Number(p.price)]);
+async function searchProductsDB({ query, category, minPrice, maxPrice }) {
+  const where = {}
 
-    const productsContext = JSON.stringify(contextProducts);
+  if (query) {
+    where.OR = [
+      { name: { contains: query, mode: 'insensitive' } },
+      { category: { contains: query, mode: 'insensitive' } },
+      { description: { contains: query, mode: 'insensitive' } }
+    ]
+  }
 
-    const systemPrompt = `You are the official AI Shopping Assistant for Simba Supermarket Rwanda (Kigali).
-Your job is to help customers find products, recommend items, help them place orders, and answer FAQs.
+  if (category) {
+    where.category = category
+  }
 
-STORE INFO:
-- Simba Supermarket has 9 branches across Kigali (Remera, Kimironko, Kacyiru, Nyamirambo, Gikondo, Kanombe, Kinyinya, Kibagabaga, Nyanza)
-- Average pickup time: 45 minutes. Delivery available within Kigali.
-- Payments: Mobile Money (MoMo) and cash on delivery.
-- Customers can place orders for pickup or delivery.
+  if (minPrice !== undefined || maxPrice !== undefined) {
+    where.price = {}
+    if (minPrice !== undefined) where.price.gte = Number(minPrice)
+    if (maxPrice !== undefined) where.price.lte = Number(maxPrice)
+  }
 
-CAPABILITIES:
-- Recommend products from the catalog (by name, category, or price range)
-- Add products directly to the user's shopping cart (use addToCartIds)
-- Answer questions about branches, payments, delivery
-- Help with order placement and product suggestions
+  const products = await prisma.product.findMany({
+    where,
+    select: {
+      id: true,
+      name: true,
+      category: true,
+      price: true,
+      stock: true,
+      imageUrl: true,
+      description: true,
+      unit: true
+    },
+    take: 20,
+    orderBy: { name: 'asc' }
+  })
 
-BEHAVIOR:
-- Be friendly, conversational, and helpful.
-- When recommending products, mention the product name and price (RWF).
-- If the user asks about a price range (e.g. "between 5000 and 10000"), filter by the price field in the catalog.
-- If the user says "add [item] to my cart" or "buy [item]" or "order [item]" or "I want [item]", include that product's ID in addToCartIds.
-- Suggest complementary products when appropriate.
-- If you cannot find a matching product, suggest the closest alternatives.
-- If a question is completely unrelated to supermarket shopping, politely redirect with: "I'm sorry, but I can only help with Simba Supermarket related questions. Please contact our support team at info@Simbasupermarket.rw or +250 788 000 000."
-
-CATALOG (Format: [id, name, price in RWF]):
-${productsContext}
-
-OUTPUT FORMAT - Respond STRICTLY as a raw JSON object (no markdown, no backticks):
-{
-  "reply": "Your friendly conversational response here. Be natural and helpful.",
-  "productIds": ["id1", "id2"],
-  "addToCartIds": ["id1"]
+  return products.map(p => ({
+    id: p.id.toString(),
+    name: p.name,
+    category: p.category,
+    price: Number(p.price),
+    stock: p.stock,
+    imageUrl: p.imageUrl,
+    description: p.description,
+    unit: p.unit
+  }))
 }
 
-EXAMPLES:
-User: "find me some milk"
-Assistant: {"reply":"Sure! We have several milk options. Inyange Fresh Milk 1L (2,500 RWF) and Inyange Low Fat Milk 500ML (1,200 RWF) are popular choices. Would you like me to add one to your cart?","productIds":["1001","1002"]}
+async function callGroq(messages, options = {}) {
+  const apiKey = process.env.GROQ_API_KEY
+  const body = {
+    model: 'llama-3.3-70b-versatile',
+    messages,
+    temperature: 0.3,
+    ...options
+  }
 
-User: "add the fresh milk to my cart"
-Assistant: {"reply":"I've added Inyange Fresh Milk 1L to your cart! Anything else you need?","productIds":["1001"],"addToCartIds":["1001"]}
+  const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(body)
+  })
 
-User: "show me cooking oil between 3000 and 6000"
-Assistant: {"reply":"Here are cooking oils in your price range:","productIds":["2001","2002","2003"]}`;
+  if (!response.ok) {
+    const errorText = await response.text()
+    console.error('Groq API Error:', response.status, errorText)
+    return null
+  }
 
-    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: query }
-        ],
-        response_format: { type: "json_object" },
-        temperature: 0.3
-      })
-    });
+  const data = await response.json()
+  return data.choices[0]?.message || null
+}
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('AI API Error:', errorText);
+export const processAiQuery = async (req, res) => {
+  try {
+    const { query } = req.body || {}
+
+    if (!query) {
+      return res.status(400).json({ error: 'Query is required' })
+    }
+
+    const apiKey = process.env.GROQ_API_KEY
+    if (!apiKey) {
+      return res.status(500).json({ error: 'AI API Key not configured on the server.' })
+    }
+
+    const systemPrompt = `You are the official AI Shopping Assistant for Simba Supermarket Rwanda (Kigali).
+
+STORE INFO:
+- 9 branches across Kigali: Remera, Kimironko, Kacyiru, Nyamirambo, Gikondo, Kanombe, Kinyinya, Kibagabaga, Nyanza
+- Pickup: ~45 minutes. Delivery available within Kigali.
+- Payments: Mobile Money (MoMo) and cash on delivery.
+
+BEHAVIOR:
+- Be friendly, conversational, and helpful in Kinyarwanda, English, or French.
+- NEVER invent products. You have NO direct access to the product catalog.
+- ALWAYS use the searchProducts tool to look up products before answering product questions.
+- When recommending, mention the product name and price in RWF, and why it's a good choice.
+- If the user wants to buy/add to cart, include the product IDs in addToCartIds.
+- Suggest complementary products when appropriate.
+- For unrelated questions, politely redirect to info@Simbasupermarket.rw or +250 788 000 000.`
+
+    // Step 1: Send query to Groq with tool definitions (no response_format)
+    const msg1 = await callGroq(
+      [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: query }
+      ],
+      { tools, tool_choice: 'auto' }
+    )
+
+    if (!msg1) {
       return res.json({
-        reply: "I'm sorry, I'm having trouble processing your request right now. Please contact our support team directly:\n- Phone: +250 788 000 000\n- Instagram: https://www.instagram.com/simbasupermarketrwanda",
+        reply: "I'm sorry, I'm having trouble processing your request right now. Please contact our support team at +250 788 000 000.",
         productIds: [],
         addToCartIds: [],
         products: []
-      });
+      })
     }
 
-    const data = await response.json();
-    const content = data.choices[0]?.message?.content;
-    
-    if (!content) {
-      throw new Error('Empty response from AI');
-    }
+    let toolResults = []
+    let messages = [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: query },
+      msg1
+    ]
 
-    let parsedContent;
-    try {
-      let cleanContent = content.trim();
-      if (cleanContent.startsWith('```')) {
-        cleanContent = cleanContent.replace(/^```(json)?\n?/, '').replace(/\n?```$/, '').trim();
+    // Execute any tool calls the model requested
+    if (msg1.tool_calls && msg1.tool_calls.length > 0) {
+      for (const tc of msg1.tool_calls) {
+        if (tc.function.name === 'searchProducts') {
+          const args = JSON.parse(tc.function.arguments)
+          toolResults = await searchProductsDB(args)
+          messages.push({
+            role: 'tool',
+            tool_call_id: tc.id,
+            content: JSON.stringify(toolResults)
+          })
+        }
       }
-      parsedContent = JSON.parse(cleanContent);
-    } catch (err) {
-      console.error("Failed to parse AI JSON response", content);
-      return res.status(500).json({ error: 'Invalid AI response format' });
+
+      // Step 2: Send tool results back to Groq for a formatted JSON answer
+      const msg2 = await callGroq(messages, {
+        response_format: { type: "json_object" }
+      })
+
+      if (!msg2) {
+        return res.json({
+          reply: "I'm sorry, I'm having trouble processing your request right now.",
+          productIds: [],
+          addToCartIds: [],
+          products: toolResults
+        })
+      }
+
+      const result = await parseAndRespond(msg2.content, toolResults)
+      return res.json(result)
     }
 
-    // Hydrate the products before returning to the frontend
-    // Use robust ID matching (convert both to String)
-    const recommendedIds = (parsedContent.productIds || []).map(String);
-    const cartIds = (parsedContent.addToCartIds || []).map(String);
-
-    parsedContent.products = allProducts
-      .filter(p => recommendedIds.includes(p.id.toString()))
-      .map(p => ({
-        ...p,
-        id: p.id.toString(),
-        price: Number(p.price)
-      }));
-
-    // Ensure cart IDs are also strings in the final response
-    parsedContent.addToCartIds = cartIds;
-
-    return res.json(parsedContent);
+    // No tool call -> direct text response (general question)
+    const directResult = await parseAndRespond(msg1.content, [])
+    return res.json(directResult)
   } catch (error) {
-    console.error('AI Controller Error:', error);
-    return res.status(500).json({ error: 'Internal Server Error' });
+    console.error('AI Controller Error:', error)
+    return res.status(500).json({ error: 'Internal Server Error' })
   }
-};
+}
+
+async function parseAndRespond(content, toolResults) {
+  if (!content) {
+    return {
+      reply: "I'm sorry, I'm having trouble processing your request.",
+      productIds: [],
+      addToCartIds: [],
+      products: []
+    }
+  }
+
+  let parsed
+  try {
+    let cleaned = content.trim()
+    if (cleaned.startsWith('```')) {
+      cleaned = cleaned.replace(/^```(json)?\n?/, '').replace(/\n?```$/, '').trim()
+    }
+    parsed = JSON.parse(cleaned)
+  } catch {
+    // Not JSON — wrap as plain text reply
+    return {
+      reply: content,
+      productIds: [],
+      addToCartIds: [],
+      products: toolResults
+    }
+  }
+
+  const recommendedIds = (parsed.productIds || []).map(String)
+  const cartIds = (parsed.addToCartIds || []).map(String)
+
+  // Prefer tool results (already in memory), fall back to DB query
+  let products = toolResults.length > 0
+    ? toolResults.filter(p => recommendedIds.includes(p.id))
+    : []
+
+  if (products.length === 0 && recommendedIds.length > 0) {
+    const ids = recommendedIds.map(id => BigInt(id))
+    const dbProducts = await prisma.product.findMany({
+      where: { id: { in: ids } },
+      select: { id: true, name: true, category: true, price: true, stock: true, imageUrl: true, description: true, unit: true }
+    })
+    products = dbProducts.map(p => ({ ...p, id: p.id.toString(), price: Number(p.price) }))
+  }
+
+  return {
+    reply: parsed.reply || "Here are some products that might interest you.",
+    productIds: recommendedIds,
+    addToCartIds: cartIds,
+    products
+  }
+}
