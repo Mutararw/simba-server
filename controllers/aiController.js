@@ -167,8 +167,16 @@ async function handleAiQuery(req, res, systemPrompt) {
 
     const apiKey = process.env.GROQ_API_KEY
     if (!apiKey) {
-      console.error('GROQ_API_KEY is not configured on the server.')
-      return res.status(500).json({ error: 'AI API Key not configured on the server.' })
+      console.error('GROQ_API_KEY is not configured on the server. Falling back to DB search.')
+      const dbProducts = await searchProductsDB({ query })
+      return res.json({
+        reply: dbProducts.length
+          ? `I found ${dbProducts.length} product${dbProducts.length > 1 ? 's' : ''} matching your search.`
+          : "I couldn't find any products matching your search. Try different keywords.",
+        productIds: dbProducts.map(p => p.id),
+        addToCartIds: [],
+        products: dbProducts
+      })
     }
 
     console.log(`[AI] Processing query: "${query.substring(0, 80)}"`)

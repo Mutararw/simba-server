@@ -23,3 +23,5 @@ services:
         sync: false
       - key: AUTO_APPROVE_STAFF
         value: "true"
+      - key: GROQ_API_KEY
+        sync: false
