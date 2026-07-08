@@ -73,6 +73,17 @@ export const createOrderWithItems = async ({
   userId, items, branchId, orderType, pickupTime, phone, 
   paymentMethod, address, district, zone, deliveryFee, deliverySlot 
 }) => {
+  // Ensure branch exists (prevent FK errors)
+  if (branchId) {
+    await prisma.branch.upsert({
+      where: { id: branchId },
+      update: { name: branchId },
+      create: { id: branchId, name: branchId, location: branchId }
+    }).catch(err => {
+      console.error('Branch upsert failed, continuing anyway...', err.message)
+    })
+  }
+
   // Ensure user exists (for guest checkout)
   if (userId === 'guest-user') {
     await prisma.user.upsert({
@@ -219,17 +230,33 @@ export const createOrderWithItems = async ({
       })
 
       if (branchId) {
-        await tx.branchStock.update({
+        const existingStock = await tx.branchStock.findUnique({
           where: {
             branchId_productId: {
               branchId,
               productId: BigInt(item.productId)
             }
-          },
-          data: {
-            stock: { decrement: item.quantity }
           }
         })
+
+        if (existingStock) {
+          await tx.branchStock.update({
+            where: {
+              branchId_productId: {
+                branchId,
+                productId: BigInt(item.productId)
+              }
+            },
+            data: {
+              stock: { decrement: item.quantity }
+            }
+          })
+        } else {
+          await tx.product.update({
+            where: { id: BigInt(item.productId) },
+            data: { stock: { decrement: item.quantity } }
+          })
+        }
         
         await tx.stockHistory.create({
           data: {

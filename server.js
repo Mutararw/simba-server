@@ -6,15 +6,18 @@ import { seedDefaultUser } from './prisma/seedUser.js'
 const PORT = process.env.PORT || 5000
 
 const BRANCHES = [
-  { id: "remera", name: "Simba Supermarket Remera" },
-  { id: "kimironko", name: "Simba Supermarket Kimironko" },
-  { id: "kacyiru", name: "Simba Supermarket Kacyiru" },
-  { id: "nyamirambo", name: "Simba Supermarket Nyamirambo" },
-  { id: "gikondo", name: "Simba Supermarket Gikondo" },
-  { id: "kanombe", name: "Simba Supermarket Kanombe" },
-  { id: "kinyinya", name: "Simba Supermarket Kinyinya" },
-  { id: "kibagabaga", name: "Simba Supermarket Kibagabaga" },
-  { id: "nyanza", name: "Simba Supermarket Nyanza" },
+  { id: "centenary", name: "Centenary House Branch", location: "Kiyovu (Town)" },
+  { id: "heights", name: "Kigali Heights Branch", location: "Kimihurura" },
+  { id: "gisozi", name: "Gisozi Branch", location: "Gisozi" },
+  { id: "remera", name: "Remera Branch", location: "Remera" },
+  { id: "kimironko", name: "Kimironko Branch", location: "Kimironko" },
+  { id: "kacyiru", name: "Kacyiru Branch", location: "Kacyiru" },
+  { id: "nyamirambo", name: "Nyamirambo Branch", location: "Nyamirambo" },
+  { id: "gikondo", name: "Gikondo Branch", location: "Gikondo" },
+  { id: "kanombe", name: "Kanombe Branch", location: "Kanombe" },
+  { id: "kinyinya", name: "Kinyinya Branch", location: "Kinyinya" },
+  { id: "kibagabaga", name: "Kibagabaga Branch", location: "Kibagabaga" },
+  { id: "nyanza", name: "Nyanza Branch", location: "Nyanza" },
 ]
 
 process.on('unhandledRejection', (reason) => {
@@ -31,7 +34,7 @@ const seedBranches = async () => {
     await prisma.branch.upsert({
       where: { id: b.id },
       update: { name: b.name },
-      create: { id: b.id, name: b.name, location: b.id }
+      create: { id: b.id, name: b.name, location: b.location }
     })
   }
   console.log('Branches seeded.')
