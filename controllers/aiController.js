@@ -32,6 +32,54 @@ const tools = [
   }
 ]
 
+const SYSTEM_PROMPT_CHAT = `You are the official AI Shopping Assistant for Simba Supermarket Rwanda (Kigali).
+
+STORE INFO:
+- 9 branches across Kigali: Remera, Kimironko, Kacyiru, Nyamirambo, Gikondo, Kanombe, Kinyinya, Kibagabaga, Nyanza
+- Pickup: ~45 minutes. Delivery available within Kigali.
+- Payments: Mobile Money (MoMo) and cash on delivery.
+
+BEHAVIOR:
+- Be friendly, conversational, and helpful in Kinyarwanda, English, or French.
+- You have NO direct access to the product catalog. You MUST call the searchProducts function to look up products before answering product questions.
+- When recommending, mention the product name and price in RWF, and why it's a good choice.
+- If the user wants to buy/add to cart, include the product IDs in addToCartIds.
+- Suggest complementary products when appropriate.
+- For unrelated questions, politely redirect to info@Simbasupermarket.rw or +250 788 000 000.
+
+You must respond in valid JSON format matching this schema:
+{
+  "reply": "your conversational response text",
+  "productIds": ["id1", "id2", ...],
+  "addToCartIds": ["id1", "id2", ...]
+}
+
+Always call searchProducts to get real product data before providing product recommendations.`
+
+const SYSTEM_PROMPT_ASSISTANT = `You are Simba AI, a friendly customer service assistant for Simba Supermarket Rwanda (Kigali).
+
+STORE INFO:
+- 9 branches across Kigali: Remera, Kimironko, Kacyiru, Nyamirambo, Gikondo, Kanombe, Kinyinya, Kibagabaga, Nyanza
+- Pickup: ~45 minutes. Delivery available within Kigali.
+- Payments: Mobile Money (MoMo) and cash on delivery.
+- Contact: info@Simbasupermarket.rw or +250 788 000 000.
+
+BEHAVIOR:
+- Be warm, conversational, and helpful in Kinyarwanda, English, or French.
+- You can answer store policy questions, help with orders, explain pickup/delivery, etc.
+- If the user wants product recommendations, use the searchProducts function.
+- Never invent product details; use the searchProducts function for product information.
+- For questions beyond your scope, politely redirect to the contact info above.
+
+You must respond in valid JSON format matching this schema:
+{
+  "reply": "your conversational response text",
+  "productIds": [],
+  "addToCartIds": []
+}
+
+For product-related questions, always call searchProducts first.`
+
 async function searchProductsDB({ query, category, minPrice, maxPrice }) {
   const where = {}
 
@@ -109,7 +157,7 @@ async function callGroq(messages, options = {}) {
   return data.choices[0]?.message || null
 }
 
-export const processAiQuery = async (req, res) => {
+async function handleAiQuery(req, res, systemPrompt) {
   try {
     const { query } = req.body || {}
 
@@ -119,28 +167,11 @@ export const processAiQuery = async (req, res) => {
 
     const apiKey = process.env.GROQ_API_KEY
     if (!apiKey) {
+      console.error('GROQ_API_KEY is not configured on the server.')
       return res.status(500).json({ error: 'AI API Key not configured on the server.' })
     }
 
-    const systemPrompt = `You are the official AI Shopping Assistant for Simba Supermarket Rwanda (Kigali).
-
-STORE INFO:
-- 9 branches across Kigali: Remera, Kimironko, Kacyiru, Nyamirambo, Gikondo, Kanombe, Kinyinya, Kibagabaga, Nyanza
-- Pickup: ~45 minutes. Delivery available within Kigali.
-- Payments: Mobile Money (MoMo) and cash on delivery.
-
-BEHAVIOR:
-- Be friendly, conversational, and helpful in Kinyarwanda, English, or French.
-- NEVER invent products. You have NO direct access to the product catalog.
-- ALWAYS use the searchProducts tool to look up products before answering product questions.
-- When recommending, mention the product name and price in RWF, and why it's a good choice.
-- If the user wants to buy/add to cart, include the product IDs in addToCartIds.
-- Suggest complementary products when appropriate.
-- For unrelated questions, politely redirect to info@Simbasupermarket.rw or +250 788 000 000.
-
-You must respond in valid JSON format. Use the searchProducts tool whenever you need product information.`
-
-    // Step 1: Send query to Groq with tool definitions (no response_format)
+    console.log(`[AI] Processing query: "${query.substring(0, 80)}"`)
     const msg1 = await callGroq(
       [
         { role: 'system', content: systemPrompt },
@@ -235,14 +266,15 @@ async function parseAndRespond(content, toolResults) {
 
   const recommendedIds = (parsed.productIds || []).map(String)
   const cartIds = (parsed.addToCartIds || []).map(String)
+  const allRequestedIds = [...new Set([...recommendedIds, ...cartIds])]
 
   // Prefer tool results (already in memory), fall back to DB query
   let products = toolResults.length > 0
     ? toolResults.filter(p => recommendedIds.includes(p.id))
     : []
 
-  if (products.length === 0 && recommendedIds.length > 0) {
-    const ids = recommendedIds.map(id => BigInt(id))
+  if (products.length === 0 && allRequestedIds.length > 0) {
+    const ids = allRequestedIds.map(id => BigInt(id))
     const dbProducts = await prisma.product.findMany({
       where: { id: { in: ids } },
       select: { id: true, name: true, category: true, price: true, stock: true, imageUrl: true, description: true, unit: true }
@@ -256,4 +288,12 @@ async function parseAndRespond(content, toolResults) {
     addToCartIds: cartIds,
     products
   }
+}
+
+export const processAiQuery = async (req, res) => {
+  await handleAiQuery(req, res, SYSTEM_PROMPT_CHAT)
+}
+
+export const processAiAssistantQuery = async (req, res) => {
+  await handleAiQuery(req, res, SYSTEM_PROMPT_ASSISTANT)
 }
