@@ -144,13 +144,15 @@ export const createOrderWithItems = async ({
           }
         })
 
-        if (!branchStock || branchStock.stock < quantity) {
+        if (branchStock && branchStock.stock < quantity) {
           await buildBranchStockError(tx, {
             productId,
             quantity,
             branchId,
             productName: product.name
           })
+        } else if (!branchStock && product.stock < quantity) {
+          throw new Error(`Insufficient stock for product ${productId}`)
         }
       } else if (product.stock < quantity) {
         throw new Error(`Insufficient stock for product ${productId}`)

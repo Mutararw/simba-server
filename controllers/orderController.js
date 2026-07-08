@@ -31,10 +31,15 @@ export const createOrder = async (req, res) => {
 
     return res.status(201).json(order)
   } catch (error) {
+    console.error('Create order failed:', error)
     const status = error.status || (error.code === 'BRANCH_STOCK_UNAVAILABLE' ? 409 : 400)
 
+    const message = error.details
+      ? `Failed to create order: ${error.message}`
+      : error.message
+
     return res.status(status).json({
-      message: 'Failed to create order',
+      message,
       error: error.message,
       code: error.code || null,
       details: error.details || null
